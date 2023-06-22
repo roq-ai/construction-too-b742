@@ -1,0 +1,51 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { roqClient } from 'server/roq';
+import { prisma } from 'server/db';
+import { authorizationValidationMiddleware, errorHandlerMiddleware } from 'server/middlewares';
+import { constructionToolValidationSchema } from 'validationSchema/construction-tools';
+import { convertQueryToPrismaUtil } from 'server/utils';
+import { getServerSession } from '@roq/nextjs';
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { roqUserId, user } = await getServerSession(req);
+  switch (req.method) {
+    case 'GET':
+      return getConstructionTools();
+    case 'POST':
+      return createConstructionTool();
+    default:
+      return res.status(405).json({ message: `Method ${req.method} not allowed` });
+  }
+
+  async function getConstructionTools() {
+    const data = await prisma.construction_tool
+      .withAuthorization({
+        roqUserId,
+        tenantId: user.tenantId,
+        roles: user.roles,
+      })
+      .findMany(convertQueryToPrismaUtil(req.query, 'construction_tool'));
+    return res.status(200).json(data);
+  }
+
+  async function createConstructionTool() {
+    await constructionToolValidationSchema.validate(req.body);
+    const body = { ...req.body };
+    if (body?.rental_agreement?.length > 0) {
+      const create_rental_agreement = body.rental_agreement;
+      body.rental_agreement = {
+        create: create_rental_agreement,
+      };
+    } else {
+      delete body.rental_agreement;
+    }
+    const data = await prisma.construction_tool.create({
+      data: body,
+    });
+    return res.status(200).json(data);
+  }
+}
+
+export default function apiHandler(req: NextApiRequest, res: NextApiResponse) {
+  return errorHandlerMiddleware(authorizationValidationMiddleware(handler))(req, res);
+}

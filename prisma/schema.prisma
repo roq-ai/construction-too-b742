@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["clientExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model company {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  description String?  @db.VarChar
+  image       String?  @db.VarChar
+  name        String   @db.VarChar(255)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  updated_at  DateTime @default(now()) @db.Timestamp(6)
+  user_id     String   @db.Uuid
+  tenant_id   String   @db.VarChar(255)
+  user        user     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outlet      outlet[]
+}
+
+model construction_tool {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String             @db.VarChar(255)
+  outlet_id        String?            @db.Uuid
+  created_at       DateTime           @default(now()) @db.Timestamp(6)
+  updated_at       DateTime           @default(now()) @db.Timestamp(6)
+  outlet           outlet?            @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rental_agreement rental_agreement[]
+}
+
+model customer {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String             @db.VarChar(255)
+  email            String             @db.VarChar(255)
+  phone            String             @db.VarChar(50)
+  user_id          String?            @db.Uuid
+  created_at       DateTime           @default(now()) @db.Timestamp(6)
+  updated_at       DateTime           @default(now()) @db.Timestamp(6)
+  user             user?              @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rental_agreement rental_agreement[]
+}
+
+model outlet {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String              @db.VarChar(255)
+  company_id        String?             @db.Uuid
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  updated_at        DateTime            @default(now()) @db.Timestamp(6)
+  construction_tool construction_tool[]
+  company           company?            @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model rental_agreement {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id          String?            @db.Uuid
+  construction_tool_id String?            @db.Uuid
+  rental_start_date    DateTime           @db.Timestamp(6)
+  rental_end_date      DateTime           @db.Timestamp(6)
+  status               String             @db.VarChar(50)
+  created_at           DateTime           @default(now()) @db.Timestamp(6)
+  updated_at           DateTime           @default(now()) @db.Timestamp(6)
+  construction_tool    construction_tool? @relation(fields: [construction_tool_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer             customer?          @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model user {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String     @unique @db.VarChar(255)
+  firstName   String?    @db.VarChar(255)
+  lastName    String?    @db.VarChar(255)
+  roq_user_id String     @db.VarChar(255)
+  tenant_id   String     @db.VarChar(255)
+  created_at  DateTime   @default(now()) @db.Timestamp(6)
+  updated_at  DateTime   @default(now()) @db.Timestamp(6)
+  company     company[]
+  customer    customer[]
+}
